@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .gitignore — Face Emotion Recognition (Streamlit Cloud deployment)
+#
+# Goal: commit ONLY what the deployed app needs. Kept on purpose (do NOT ignore):
+#   - models/emotion_model.tflite            (the active classifier)
+#   - assets/models/blaze_face_short_range.tflite  (MediaPipe face detector asset)
+#   - app.py, src/, requirements.txt, packages.txt, runtime.txt, .streamlit/config.toml
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Python bytecode / caches ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ── Virtual environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ── Packaging / build artifacts ──────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ── Testing / coverage / type-check caches ───────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ── Jupyter / notebooks ──────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── IDE / editor ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS junk ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Secrets / local environment (NEVER commit) ───────────────────────────────
+.env
+.env.*
+.streamlit/secrets.toml
+
+# ── Logs / temp ──────────────────────────────────────────────────────────────
+*.log
+*.tmp
+tmp/
+scratch/
+
+# ── Unused / superseded models (NOT needed for deployment) ───────────────────
+# The app loads models/emotion_model.tflite (see MODEL_NAME in src/config.py).
+# These are dead weight in the repo:
+models/EffNetB4_ft.keras                       # broken on Keras 3.10 (version drift); superseded
+models/lenet_Face_Expr_Classifier_fp16.tflite  # previous model, no longer used
+# Also ignore any other Keras exports by extension (the active model is TFLite):
+*.keras
+*.h5
+*.hdf5

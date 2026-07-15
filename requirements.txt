@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Face Emotion Recognition — pinned runtime dependencies (Streamlit Cloud, CPU)
+# Target: Python 3.11 (see runtime.txt).  Direct dependencies ONLY.
+# Transitive deps (av, aiortc, aioice, pillow, tornado, packaging, ...) are
+# resolved automatically by pip — do NOT list them here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- Foundation (pinned first: everything else must agree with these) --------
+numpy==1.26.4          # <2.0 on purpose: mediapipe/opencv/litert are unstable on numpy 2.x
+protobuf==5.29.6       # mediapipe 0.10.35 (Tasks API) + streamlit both accept protobuf 5.x
+
+# --- UI + hosting runtime ----------------------------------------------------
+streamlit==1.38.0
+
+# --- Client-side webcam over WebRTC (only viable camera path on Cloud) --------
+streamlit-webrtc==0.47.9
+
+# --- Face detection (fast, CPU, multi-face). Uses the Tasks API + the bundled
+#     assets/models/blaze_face_short_range.tflite (the legacy solutions API is
+#     removed in current mediapipe). ~0.10.35 validated with protobuf 5.x.
+mediapipe==0.10.35
+
+# --- TensorFlow Lite inference (LiteRT — the maintained successor to
+#     tflite-runtime).  Import as: from ai_edge_litert.interpreter import Interpreter
+ai-edge-litert==1.1.0
+
+# --- Image ops: crop / pad / resize / draw (headless = no GUI system libs) ----
+opencv-python-headless==4.10.0.84
+
+# NOTE: huggingface-hub removed — the model is now 31 MB (lenet_Face_Expr_...),
+# small enough to commit directly to the repo, so no runtime download is needed.
