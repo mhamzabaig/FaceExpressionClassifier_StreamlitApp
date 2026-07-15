@@ -1,6 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Face Emotion Recognition — pinned runtime dependencies (Streamlit Cloud, CPU)
-# Target: Python 3.11 (see runtime.txt).  Direct dependencies ONLY.
+# Target: Python 3.11 — SET THIS in the Streamlit Cloud deploy dialog under
+#   "Advanced settings" -> Python version. Community Cloud IGNORES runtime.txt,
+#   and its default (3.13/3.14) has no wheels for the numpy/mediapipe/litert pins
+#   below, which fails the install. Python can't be changed after deploy — to
+#   change it you must delete the app and redeploy. Direct dependencies ONLY.
 # Transitive deps (av, aiortc, aioice, pillow, tornado, packaging, ...) are
 # resolved automatically by pip — do NOT list them here.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -27,5 +31,6 @@ ai-edge-litert==1.1.0
 # --- Image ops: crop / pad / resize / draw (headless = no GUI system libs) ----
 opencv-python-headless==4.10.0.84
 
-# NOTE: huggingface-hub removed — the model is now 31 MB (lenet_Face_Expr_...),
-# small enough to commit directly to the repo, so no runtime download is needed.
+# NOTE: huggingface-hub removed — models/emotion_model.tflite (~72 MB) is
+# committed directly to the repo (under GitHub's 100 MB limit), so no runtime
+# download is needed.
