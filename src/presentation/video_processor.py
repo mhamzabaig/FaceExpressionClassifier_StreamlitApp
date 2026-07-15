@@ -24,6 +24,7 @@ import av
 import numpy as np
 
 from src.application import FaceResult, WebcamPipeline
+from src.infrastructure.inference.emotion_classifier import _BaseEmotionClassifier
 from src.infrastructure.preprocessing import NormalizationMode
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ class EmotionVideoProcessor:
 
     def __init__(
         self,
+        classifier: Optional[_BaseEmotionClassifier] = None,
         normalization: NormalizationMode = NormalizationMode.NONE,
         min_detection_confidence: float = 0.5,
         max_faces: Optional[int] = None,
@@ -69,6 +71,10 @@ class EmotionVideoProcessor:
         """Build the pipeline and initialise metric state.
 
         Args:
+            classifier: An already-loaded (typically ``st.cache_resource``-cached)
+                classifier to reuse, so the model is not reloaded on every stream
+                start. When provided it is not closed when the stream ends.
+                ``None`` loads the model here (fine for local/CLI use).
             normalization: Pixel normalization for the classifier. Defaults to
                 :data:`NormalizationMode.NONE` (raw ``[0, 255]``), matching the
                 current model whose rescaling is baked in.
@@ -79,6 +85,7 @@ class EmotionVideoProcessor:
             min_detection_confidence=min_detection_confidence,
             normalization=normalization,
             max_faces=max_faces,
+            classifier=classifier,
         )
         self._lock = threading.Lock()
         self._fps = 0.0

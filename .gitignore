@@ -62,6 +62,11 @@ desktop.ini
 tmp/
 scratch/
 
+# ── Local-only dev tools (NOT part of the deployed Streamlit app) ─────────────
+# demo_detect_webcam.py is a local OpenCV-window smoke test; the Cloud app uses
+# streamlit-webrtc and never imports it. Kept locally, excluded from the repo.
+tools/
+
 # ── Unused / superseded models (NOT needed for deployment) ───────────────────
 # The app loads models/emotion_model.tflite (see MODEL_NAME in src/config.py).
 # These are dead weight in the repo:

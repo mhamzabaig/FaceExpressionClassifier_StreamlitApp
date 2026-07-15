@@ -31,6 +31,7 @@ import os
 from types import TracebackType
 from typing import List, Optional, Tuple, Type, TypedDict
 
+import cv2
 import numpy as np
 
 try:
@@ -137,6 +138,9 @@ class FaceDetector:
         self.model_asset_path = model_asset_path
         self.input_is_bgr = input_is_bgr
         self._closed = False
+        # Reused BGR->RGB scratch buffer (per detector, which is single-threaded)
+        # so we don't allocate a full-frame array on every detect() call.
+        self._rgb_buf: Optional[np.ndarray] = None
 
         try:
             options = mp_vision.FaceDetectorOptions(
@@ -198,7 +202,12 @@ class FaceDetector:
         return detections
 
     def _to_rgb(self, frame: np.ndarray) -> np.ndarray:
-        """Return a contiguous RGB copy of ``frame`` for MediaPipe.
+        """Return a contiguous RGB view/copy of ``frame`` for MediaPipe.
+
+        Reuses a per-detector scratch buffer for the BGR->RGB conversion so a
+        full-frame array is not allocated on every call. Safe because the
+        detector is single-threaded and the Tasks API consumes the image
+        synchronously within :meth:`detect` (IMAGE mode).
 
         Args:
             frame: Validated ``(H, W, 3)`` ``uint8`` image.
@@ -206,9 +215,14 @@ class FaceDetector:
         Returns:
             A C-contiguous RGB ``uint8`` array (MediaPipe requires contiguity).
         """
-        if self.input_is_bgr:
-            return np.ascontiguousarray(frame[:, :, ::-1])
-        return np.ascontiguousarray(frame)
+        if not self.input_is_bgr:
+            return np.ascontiguousarray(frame)
+
+        if self._rgb_buf is None or self._rgb_buf.shape != frame.shape:
+            self._rgb_buf = np.empty_like(frame)
+        # cv2.cvtColor writes straight into the reused buffer (no new allocation).
+        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, dst=self._rgb_buf)
+        return self._rgb_buf
 
     @staticmethod
     def _to_detection(raw: object, width: int, height: int) -> Optional[Detection]:

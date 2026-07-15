@@ -25,7 +25,8 @@ from __future__ import annotations
 import streamlit as st
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
-from src.config import MODEL_NAME
+from src.config import MODEL_INPUT_SIZE, MODEL_NAME, get_model_path
+from src.infrastructure.inference import create_classifier
 from src.presentation import EmotionVideoProcessor
 
 # ── Static UI content ────────────────────────────────────────────────────────
@@ -73,6 +74,23 @@ digraph {
 RTC_CONFIGURATION = {
     "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
 }
+
+
+# ── Heavy resources (loaded once, cached for the whole process) ──────────────
+
+@st.cache_resource(show_spinner="Loading emotion model…")
+def load_classifier():
+    """Load the classifier once and reuse it across reruns and stream restarts.
+
+    ``st.cache_resource`` keeps a single instance per process, so the ~72 MB
+    model is read and its tensors allocated only once — not on every camera
+    start. The classifier is thread-safe, so the shared instance is safe to use
+    from the WebRTC worker thread.
+
+    Returns:
+        The shared, warmed-up classifier for the model in :data:`MODEL_NAME`.
+    """
+    return create_classifier(get_model_path(), input_size=MODEL_INPUT_SIZE)
 
 
 # ── session_state ────────────────────────────────────────────────────────────
@@ -193,13 +211,18 @@ def main() -> None:
 
     feed_col, stats_col = st.columns([3, 2])
 
+    # Resolve the cached model once (instant after the first run) and hand it to
+    # every processor the WebRTC component builds, so restarting the camera never
+    # reloads the model.
+    classifier = load_classifier()
+
     with feed_col:
         st.subheader("Camera feed")
         ctx = webrtc_streamer(
             key="emotion-stream",
             mode=WebRtcMode.SENDRECV,
             rtc_configuration=RTC_CONFIGURATION,
-            video_processor_factory=EmotionVideoProcessor,
+            video_processor_factory=lambda: EmotionVideoProcessor(classifier=classifier),
             media_stream_constraints={"video": True, "audio": False},
             desired_playing_state=st.session_state.camera_on,
             async_processing=True,

@@ -77,6 +77,7 @@ class WebcamPipeline:
         drawer: EmotionDrawer,
         annotate: bool = True,
         max_faces: Optional[int] = None,
+        own_classifier: bool = True,
     ) -> None:
         """Assemble a pipeline from ready-made components (dependency injection).
 
@@ -92,6 +93,9 @@ class WebcamPipeline:
             annotate: If ``True`` (default), :meth:`process` draws onto the frame.
             max_faces: If set, classify only the ``max_faces`` largest faces per
                 frame. ``None`` (default) classifies every detected face.
+            own_classifier: If ``True`` (default), :meth:`close` also closes the
+                classifier. Set ``False`` when the classifier is shared/cached
+                (e.g. via ``st.cache_resource``) and must outlive this pipeline.
 
         Raises:
             ValueError: If ``max_faces`` is not positive.
@@ -105,6 +109,7 @@ class WebcamPipeline:
         self._drawer = drawer
         self.annotate = annotate
         self.max_faces = max_faces
+        self._own_classifier = own_classifier
         self._closed = False
 
     @classmethod
@@ -115,6 +120,7 @@ class WebcamPipeline:
         margin: float = 0.0,
         annotate: bool = True,
         max_faces: Optional[int] = None,
+        classifier: Optional[_BaseEmotionClassifier] = None,
     ) -> "WebcamPipeline":
         """Build a pipeline from :mod:`src.config` and sensible defaults.
 
@@ -132,6 +138,11 @@ class WebcamPipeline:
             margin: Fractional context margin around each crop.
             annotate: Draw results onto the frame. Defaults to ``True``.
             max_faces: Optional per-frame cap (largest faces first).
+            classifier: An already-built (typically cached/shared) classifier to
+                reuse instead of loading the model again. When provided, the
+                pipeline does **not** own it — :meth:`close` leaves it open so it
+                can be reused across stream restarts. ``None`` (default) loads the
+                model here and owns it.
 
         Returns:
             A ready-to-use, warmed-up :class:`WebcamPipeline`.
@@ -142,7 +153,9 @@ class WebcamPipeline:
             normalization=normalization,
             margin=margin,
         )
-        classifier = create_classifier(get_model_path(), input_size=MODEL_INPUT_SIZE)
+        own_classifier = classifier is None
+        if classifier is None:
+            classifier = create_classifier(get_model_path(), input_size=MODEL_INPUT_SIZE)
         drawer = EmotionDrawer()
         return cls(
             detector=detector,
@@ -151,6 +164,7 @@ class WebcamPipeline:
             drawer=drawer,
             annotate=annotate,
             max_faces=max_faces,
+            own_classifier=own_classifier,
         )
 
     def process(self, frame: np.ndarray) -> np.ndarray:
@@ -276,13 +290,18 @@ class WebcamPipeline:
             raise RuntimeError("process()/predict() called on a closed WebcamPipeline.")
 
     def close(self) -> None:
-        """Release the detector and classifier. Safe to call multiple times."""
+        """Release the detector (and the classifier if owned). Safe to call twice.
+
+        A classifier injected via ``from_config(classifier=...)`` is left open so
+        a shared/cached instance survives for the next stream.
+        """
         if self._closed:
             return
         self._closed = True
         self._detector.close()
-        self._classifier.close()
-        logger.info("WebcamPipeline closed.")
+        if self._own_classifier:
+            self._classifier.close()
+        logger.info("WebcamPipeline closed (classifier owned=%s).", self._own_classifier)
 
     def __enter__(self) -> "WebcamPipeline":
         """Enter the runtime context and return the pipeline."""

@@ -314,7 +314,11 @@ class FacePreprocessor:
             preserve_aspect_ratio=self.preserve_aspect_ratio,
             pad_value=self.pad_value,
         )
-        rgb = bgr_to_rgb(resized) if self.input_is_bgr else resized
+        # BGR->RGB as a cheap channel-axis view instead of a full cv2.cvtColor
+        # copy: the float cast inside normalize_image materialises the (single)
+        # contiguous output array, so we skip an intermediate uint8 allocation on
+        # the per-face hot path. Result is byte-for-byte identical to cvtColor.
+        rgb = resized[:, :, ::-1] if self.input_is_bgr else resized
         normalized = normalize_image(rgb, self.normalization)
         return add_batch_dim(normalized)
 

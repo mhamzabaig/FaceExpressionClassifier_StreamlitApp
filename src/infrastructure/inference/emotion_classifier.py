@@ -122,7 +122,8 @@ class _BaseEmotionClassifier:
 
     def _dequantize(self, raw_output: np.ndarray) -> np.ndarray:
         """Map raw output to float32. Identity unless the backend quantizes output."""
-        return raw_output.astype(np.float32)
+        # copy=False: no allocation when the output is already float32.
+        return raw_output.astype(np.float32, copy=False)
 
     # ── Shared prediction path ───────────────────────────────────────────────
     def predict(self, input_tensor: np.ndarray) -> EmotionResult:
@@ -394,7 +395,9 @@ class TFLiteEmotionClassifier(_BaseEmotionClassifier):
             quantized = np.round(input_tensor / scale + zero_point)
             quantized = np.clip(quantized, info.min, info.max)
             return quantized.astype(self._input_dtype)
-        return input_tensor.astype(self._input_dtype)
+        # copy=False: the preprocessed tensor is already float32, so this is a
+        # no-op for a float model (set_tensor copies into the interpreter anyway).
+        return input_tensor.astype(self._input_dtype, copy=False)
 
     def _infer(self, prepared: np.ndarray) -> np.ndarray:
         """Run the interpreter. Copies the output (get_tensor returns a view)."""
@@ -405,7 +408,7 @@ class TFLiteEmotionClassifier(_BaseEmotionClassifier):
     def _dequantize(self, raw_output: np.ndarray) -> np.ndarray:
         """Dequantize integer output using the interpreter's parameters."""
         scale, zero_point = self._output_detail.get("quantization", (0.0, 0))
-        output = raw_output.astype(np.float32)
+        output = raw_output.astype(np.float32, copy=False)
         if np.issubdtype(self._output_dtype, np.integer) and scale not in (0, 0.0):
             output = (output - zero_point) * scale
         return output
@@ -535,7 +538,8 @@ class KerasEmotionClassifier(_BaseEmotionClassifier):
 
     def _prepare_input(self, input_tensor: np.ndarray) -> np.ndarray:
         """Cast to float32 (Keras models take float input; no quantization)."""
-        return input_tensor.astype(np.float32)
+        # copy=False: no-op when the preprocessed tensor is already float32.
+        return input_tensor.astype(np.float32, copy=False)
 
     def _infer(self, prepared: np.ndarray) -> np.ndarray:
         """Run eager inference and return the output as a NumPy array."""
