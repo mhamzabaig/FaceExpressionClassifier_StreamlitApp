@@ -1,2 +1,2 @@
 libgl1
-libglesv2-mesa
+libglesv2
