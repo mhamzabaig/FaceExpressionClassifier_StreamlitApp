@@ -31,6 +31,5 @@ ai-edge-litert==1.1.0
 # --- Image ops: crop / pad / resize / draw (headless = no GUI system libs) ----
 opencv-python-headless==4.10.0.84
 
-# NOTE: huggingface-hub removed — models/emotion_model.tflite (~72 MB) is
-# committed directly to the repo (under GitHub's 100 MB limit), so no runtime
-# download is needed.
+# Tensorflow and tflite needed
+TensorFlow==2.20.0
