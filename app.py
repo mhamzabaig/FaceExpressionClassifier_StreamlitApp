@@ -203,6 +203,11 @@ def render_live_stats(ctx) -> None:
 def main() -> None:
     """Compose the page."""
     st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
+    # Hide Streamlit's built-in Deploy button from the top-right toolbar.
+    st.markdown(
+        "<style>[data-testid='stAppDeployButton'] { display: none; }</style>",
+        unsafe_allow_html=True,
+    )
     _init_state()
 
     render_landing()
